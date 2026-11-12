@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+# Windows batch files and the players' guides keep CRLF in every checkout and in GitHub's zip download
+*.bat text eol=crlf
+guide/*.txt text eol=crlf
+*.ico binary
