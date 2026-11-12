@@ -11,7 +11,7 @@
 //   * a watchdog thread: no picture for 20 s with the game's thread busy -> one log line naming it as a hang, where
 //     the guard state was, and that the next start will be safe if this ends here.
 // A new build starts clean. Delete out\aotr_guard.txt to clear it by hand.
-#define AOTR_BUILDNO_GUARD 135                                     // = AOTR_BUILDNO (checked where that is defined)
+#define AOTR_BUILDNO_GUARD 136                                     // = AOTR_BUILDNO (checked where that is defined)
 static char g_gdPath[MAX_PATH]; static volatile LONG g_gdSafe = 0, g_gdFrames = 0, g_gdSteps = 0, g_gdState = 0, g_gdPlayed = 0;
 static const char* const kGdState[] = { "started", "loading", "playing" };
 static void gdWrite() {
@@ -191,29 +191,4 @@ static void gdPowerThrottlingOff() {
          ok ? "OFF (the game is never treated as a background process)" : (f ? "could not be changed on this Windows" : "is not known to this Windows (older than 8)"),
          hp ? (ps.ACLineStatus == 1 ? "mains" : (ps.ACLineStatus == 0 ? "BATTERY" : "unknown")) : "unknown", hp && (ps.SystemStatusFlag & 1) ? ", battery saver ON" : "");
 }
-// v78: a working-set floor. The v74 test counted 14 000-19 000 page faults a second in calm play (none from the disk)
-// and tens of thousands in the slow frames. One source of soft faults is Windows taking pages out of the game's
-// working set (trimming) and the game touching them again a moment later. A soft minimum (QUOTA_LIMITS_HARDWS_MIN_
-// DISABLE: Windows may still go below it when the machine itself runs short) asks it to leave the game ~1-1.5 GB -
-// the game uses 1.6-1.8 GB in a battle. Only on a PC with 6 GB of memory or more, and only when 1.5 GB of it is free.
-// Nothing the game computes or draws changes. The diagnostics build counts the trims that remain (vmprobe). Off:
-// WSFLOOR_OFF next to the DLL.
-static void gdWorkingSetFloor() {
-    char mk[MAX_PATH];
-    if (GetFileAttributesA(aotrPath(mk, "WSFLOOR_OFF")) != INVALID_FILE_ATTRIBUTES) { logf("memory: WSFLOOR_OFF is present - Windows' own working-set rules."); return; }
-    MEMORYSTATUSEX ms; ms.dwLength = sizeof(ms);
-    if (!GlobalMemoryStatusEx(&ms)) return;
-    ULONG64 total = ms.ullTotalPhys >> 20, avail = ms.ullAvailPhys >> 20;
-    if (total < 6 * 1024 || avail < 1536) { logf("memory: working-set floor not set (%u MB of memory, %u MB free).", (unsigned)total, (unsigned)avail); return; }
-    SIZE_T mn = (SIZE_T)(total >= 12 * 1024 ? 1536 : 1024) << 20, mx = (SIZE_T)3584 << 20;
-    HANDLE tok = NULL; TOKEN_PRIVILEGES tp; tp.PrivilegeCount = 1; tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-    if (OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &tok)) {
-        if (LookupPrivilegeValueA(NULL, "SeIncreaseWorkingSetPrivilege", &tp.Privileges[0].Luid)) AdjustTokenPrivileges(tok, FALSE, &tp, 0, NULL, NULL);
-        CloseHandle(tok);
-    }
-    BOOL ok = SetProcessWorkingSetSizeEx(GetCurrentProcess(), mn, mx, QUOTA_LIMITS_HARDWS_MIN_DISABLE | QUOTA_LIMITS_HARDWS_MAX_DISABLE);
-    DWORD err = ok ? 0 : GetLastError();
-    logf("memory: working-set floor %s (%u MB soft minimum; %u MB of memory, %u MB free)%s", ok ? "set" : "NOT set", (unsigned)(mn >> 20), (unsigned)total, (unsigned)avail,
-         ok ? "" : (err == ERROR_PRIVILEGE_NOT_HELD ? " - Windows refused the privilege" : " - Windows refused it"));
-}
-static void installGuard() { { char p[MAX_PATH]; DeleteFileA(aotrPath(p, "aotr_throttle.txt")); DeleteFileA(aotrPath(p, "aotr_throttle_ack.txt")); } gdInit(); gdPowerThrottlingOff(); gdWorkingSetFloor(); CreateThread(NULL, 0, gdThread, NULL, 0, NULL); }
+static void installGuard() { { char p[MAX_PATH]; DeleteFileA(aotrPath(p, "aotr_throttle.txt")); DeleteFileA(aotrPath(p, "aotr_throttle_ack.txt")); } gdInit(); gdPowerThrottlingOff(); CreateThread(NULL, 0, gdThread, NULL, 0, NULL); }

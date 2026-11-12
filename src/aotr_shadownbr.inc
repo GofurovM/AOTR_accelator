@@ -384,7 +384,6 @@ static DWORD WINAPI snbReport(LPVOID) {
 
 static void installShadowNbr() {
     char env[8]; env[0] = 0;
-    { char mk[MAX_PATH]; if (GetFileAttributesA(aotrPath(mk, "SHADOWNBR_OFF")) != INVALID_FILE_ATTRIBUTES) { logf("shadow-nbr: SHADOWNBR_OFF is present - the engine's own code builds the shadow edge neighbours."); return; } }   // v82.1: a file switch too
     if (GetEnvironmentVariableA("AOTR_SHADOWNBR", env, sizeof(env)) && env[0] == '0') { logf("shadow-nbr: off (AOTR_SHADOWNBR=0) - the engine's own code builds the shadow edge neighbours."); return; }
     if (!snbCodeIsKnown()) { logf("shadow-nbr: the shadow neighbour code is not what this build has - the engine's own code builds them."); return; }
     o_snbBuild = (tSnbThis)makeTrampoline((BYTE*)SNB_BUILD, 6);             // push ebp; mov ebp, esp; sub esp, 44h

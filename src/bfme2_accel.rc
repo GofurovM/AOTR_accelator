@@ -2,8 +2,8 @@
 #include <windows.h>
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 85,0,0,135
- PRODUCTVERSION 85,0,0,135
+ FILEVERSION 72,1,0,136
+ PRODUCTVERSION 72,1,0,136
  FILEFLAGSMASK 0x3fL
  FILEFLAGS 0x0L
  FILEOS 0x40004L
@@ -17,9 +17,9 @@ BEGIN
             VALUE "CompanyName", "AOTR Accelerator project (open source, MIT)"
             VALUE "FileDescription", "AOTR Accelerator - performance add-on for Age of the Ring (runs inside the game)"
             VALUE "InternalName", "bfme2_accel"
-            VALUE "FileVersion", "85 (build 135)"
+            VALUE "FileVersion", "72.1 stable (build 136)"
             VALUE "ProductName", "AOTR Accelerator"
-            VALUE "ProductVersion", "85 (build 135)"
+            VALUE "ProductVersion", "72.1 stable (build 136)"
             VALUE "OriginalFilename", "bfme2_accel.dll"
             VALUE "LegalCopyright", "MIT license - based on BFME2 Accelerator by Ohad Baehr"
         END

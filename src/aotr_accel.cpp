@@ -2163,59 +2163,8 @@ static ExpMod* expFor(DWORD base) {
     } __except (EXCEPTION_EXECUTE_HANDLER) { m->n = 0; }
     return m;
 }
-#ifdef AOTR_DIAG
-// v77: this DLL's own functions by name in the diagnostics lines - from the map file build.bat writes next to it
-// (out\bfme2_accel.map: "0001:00012345  ?name@@...  10013345 f   aotr_accel.obj", static functions included).
-struct OurSym { DWORD rva; char name[44]; };
-static OurSym* g_ourSyms = NULL; static int g_nOurSyms = 0; static DWORD g_ourBase = 0, g_ourEnd = 0; static volatile LONG g_ourMapTried = 0;
-static int ourSymCmp(const void* a, const void* b) { DWORD x = ((const OurSym*)a)->rva, y = ((const OurSym*)b)->rva; return x < y ? -1 : x > y; }
-static void ourMapLoad() {
-    if (InterlockedExchange(&g_ourMapTried, 1)) return;
-    HMODULE me = NULL;
-    if (!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&ourMapLoad, &me)) return;
-    IMAGE_NT_HEADERS* nt = (IMAGE_NT_HEADERS*)((BYTE*)me + ((IMAGE_DOS_HEADER*)me)->e_lfanew);
-    g_ourBase = (DWORD)(ULONG_PTR)me; g_ourEnd = g_ourBase + nt->OptionalHeader.SizeOfImage;
-    char path[MAX_PATH]; aotrPath(path, "bfme2_accel.map");
-    HANDLE f = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-    if (f == INVALID_HANDLE_VALUE) return;
-    DWORD size = GetFileSize(f, NULL);
-    char* b = (size && size < (32u << 20)) ? (char*)VirtualAlloc(NULL, size + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE) : NULL;
-    DWORD got = 0; if (b) ReadFile(f, b, size, &got, NULL); CloseHandle(f);
-    if (!b) return;
-    b[got] = 0;
-    DWORD pref = 0x10000000; char* pl = strstr(b, "Preferred load address is "); if (pl) pref = strtoul(pl + 26, NULL, 16);
-    int cap = 1 << 16; OurSym* t = (OurSym*)VirtualAlloc(NULL, cap * sizeof(OurSym), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE); int n = 0;
-    for (char* l = b; t && *l && n < cap; ) {
-        char* e = l; while (*e && *e != '\n') ++e;
-        char sv = *e; *e = 0;
-        // " 0001:00012345       ?name@@YAXXZ               10013345 f   aotr_accel.obj"
-        if (l[0] == ' ' && l[1] == '0' && l[5] == ':') {
-            char nm[256]; unsigned va = 0; char fl = 0;
-            if (sscanf(l + 15, "%255s %x %c", nm, &va, &fl) >= 2 && va > pref && va - pref < (64u << 20) && (fl == 'f' || fl == 'F' || fl == 'i')) {
-                const char* q = nm[0] == '?' ? nm + 1 : (nm[0] == '_' ? nm + 1 : nm);
-                int k = 0; while (q[k] && q[k] != '@' && k < 43) { t[n].name[k] = q[k]; ++k; } t[n].name[k] = 0;
-                t[n].rva = va - pref; ++n;
-            }
-        }
-        *e = sv; l = *e ? e + 1 : e;
-    }
-    VirtualFree(b, 0, MEM_RELEASE);
-    if (!n) { if (t) VirtualFree(t, 0, MEM_RELEASE); return; }
-    qsort(t, n, sizeof(OurSym), ourSymCmp);
-    g_ourSyms = t; g_nOurSyms = n;
-    logf("symbols: %d functions of this DLL read from bfme2_accel.map - the diagnostics lines name them.", n);
-}
-#endif
 static void symName(DWORD addr, char* out) {
     if (addr >= g_gameBase && addr < g_gameEnd) { wsprintfA(out, "game.dat+%06X", addr - g_gameBase); return; }
-#ifdef AOTR_DIAG
-    if (!g_ourMapTried) ourMapLoad();
-    if (g_nOurSyms && addr >= g_ourBase && addr < g_ourEnd) {
-        DWORD rva = addr - g_ourBase; int lo = 0, hi = g_nOurSyms - 1, best = -1;
-        while (lo <= hi) { int mid = (lo + hi) / 2; if (g_ourSyms[mid].rva <= rva) { best = mid; lo = mid + 1; } else hi = mid - 1; }
-        if (best >= 0 && rva - g_ourSyms[best].rva < 0x8000) { wsprintfA(out, "accel!%s+%X", g_ourSyms[best].name, rva - g_ourSyms[best].rva); return; }
-    }
-#endif
     int mi = pmOf(addr);
     if (mi < 0) { wsprintfA(out, "?%08X", addr); return; }
     DWORD rva = addr - g_pm[mi].base;
@@ -2546,10 +2495,6 @@ static void rotateLog() {
 #include "aotr_shadowpcf.inc"
 #include "aotr_gpupref.inc"
 #include "aotr_badge.inc"                        // v71: the status light, aotr_status.txt, the refresh after every fifth match
-#include "aotr_cbfind.inc"                     // v77: ControlBar::findNonConstCommandButton remembers its answers by name (self-proving)
-#include "aotr_fmfind.inc"                     // v81: Object::findModule remembers its answers per object (self-proving)
-#include "aotr_maskfast.inc"                   // v81: the 19-word flag mask test in SSE steps (self-proving)
-#include "aotr_hashfind.inc"                   // v82: the unsigned-key hash map find without a divide (self-proving)
 #include "aotr_overlay.inc"
 
 // ---------------------------------------------------------------- game-thread sampler v2 (RT build)
@@ -2789,12 +2734,6 @@ static volatile LONG g_frW = 0;                 // frames written by aotr_framep
 #include "aotr_sched.inc"
 #include "aotr_abtest.inc"
 #include "aotr_frameprof.inc"
-#include "aotr_taskwarm.inc"                   // v77: the FX renderer's task list read ahead before its neighbours are compared (prefetch only)
-#include "aotr_pxpar.inc"                      // v74: the particles' own update on the spare cores (exact, self-checking)
-#ifdef AOTR_DIAG
-#include "aotr_vmprobe.inc"                     // v77 (diagnostics build): who commits and frees memory, working-set trims
-#endif
-#include "aotr_fxprobe.inc"                    // v73 (diagnostics build): the particle update measured
 #include "aotr_preshader.inc"
 
 // ---------------------------------------------------------------- init
@@ -2821,11 +2760,11 @@ static bool aotrSecondCopy() {
 // by side and a log has to say which one it is without opening the DLL. The banner carries the folder the DLL was
 // loaded from, so a log can never be mistaken for another test folder's. v30: it is the first line of every session.
 #ifdef AOTR_DIAG
-#define AOTR_RELEASE "AOTR accel v85 (diagnostics)"
+#define AOTR_RELEASE "AOTR accel v72.1 stable (diagnostics)"
 #else
-#define AOTR_RELEASE "AOTR accel v85"
+#define AOTR_RELEASE "AOTR accel v72.1 stable"
 #endif
-#define AOTR_BUILDNO 135                                  // (also written out in aotr_overlay.inc: the in-frame banner and ovSwitches)
+#define AOTR_BUILDNO 136                                  // (also written out in aotr_overlay.inc: the in-frame banner and ovSwitches)
 static_assert(AOTR_BUILDNO == AOTR_BUILDNO_GUARD, "aotr_guard.inc: AOTR_BUILDNO_GUARD must equal AOTR_BUILDNO");
 static void aotrBanner() {
     HMODULE selfMod = NULL;
@@ -2855,65 +2794,16 @@ static void aotrBanner() {
 // the right Ctrl is let go without any other key having been pressed meanwhile (so Ctrl+1 etc. never mark).
 // And without any key: every second of play under 28 frames is written as it happens ("drop"), so a fall from 29 to 26
 // is in the log too.
-#ifdef AOTR_DIAG
-// v76 / v82.1 (diagnostics build): GLITCH HUNT. The long upward shapes at full graphics (NOTES, open issues). The v82
-// test (22 markers) cleared the two first suspects: they came with the logic slicer off and the particle spread off
-// just as with them on. What they look like - dark columns stretched from units and flat dark walls - is stencil
-// shadow volumes drawn into the picture. v82.1 therefore switches the RENDER THREAD itself: FULL (the game's Direct3D
-// calls carried out on the worker) for 3 minutes, then CORE (every call made directly on the game thread, as the
-// engine ships) for 3 minutes, and so on. The player presses the right Ctrl when a glitch is on the screen; each
-// marker line says which mode was on, and the 30 s line counts the markers per mode. Markers in both modes mean the
-// render thread is not the cause either (next: SHADOWNBR_OFF / SHADOWWELD_OFF, then VANILLA). Release never does this.
-static volatile LONG g_ghCore = -1; static volatile LONG g_ghMarks[2], g_ghSecs[2];
-static void ghTick(bool play) {
-    static DWORD playSecs = 0;                         // called once a second (aotrMarkKeys)
-    if (!play || !g_rtInstalled) return;
-    if (g_rtBypassN > RT_BYP_RETRIES) return;          // v83.1: the freeze guard has stepped the render thread aside for good - never turned back on here
-    LONG c = (LONG)((playSecs / 180) & 1);
-    ++playSecs;
-    if (g_ghCore >= 0) InterlockedIncrement(&g_ghSecs[g_rtActive ? 0 : 1]);   // v83.1: the mode really in effect, not the wish
-    if (c != g_ghCore) {
-        g_ghCore = c;
-        // v83.1: only the wish. rtApplyToggle (at the next Present, on the game thread) drains the queue and then flips
-        // g_rtActive and g_rtCoreMode together - "kept in step there, and only there". v83 also set g_rtCoreMode here, at
-        // once, from this thread: for a moment the game thread called DXVK directly while the worker still ran queued
-        // calls, and the v83 test's fifth switch crashed DXVK's own thread (d3d9.dll+EDB5) - the game hung.
-        InterlockedExchange(&g_rtWantOn, c ? 0 : 1);
-        logf("glitch-hunt: the render thread is now %s (play minute %u) - press the right Ctrl when a glitch is on the screen",
-             c ? "OFF (CORE: every Direct3D call on the game thread)" : "ON (FULL)", playSecs / 60);
-    }
-}
-static const char* ghState() {
-    static char b[96];
-    if (g_ghCore < 0) return "";
-    LONG k = g_rtActive ? 0 : 1;                       // v83.1: the mode really in effect (the switch lands at the next frame)
-    InterlockedIncrement(&g_ghMarks[k]);
-    wsprintfA(b, " [glitch-hunt: render thread %s]", k ? "OFF (CORE)" : "ON (FULL)");
-    return b;
-}
-static void ghReport() {
-    if (g_ghCore < 0) return;
-    logf("glitch-hunt: markers so far by state (minutes in that state) - render thread ON (FULL) %d (%d), render thread OFF (CORE) %d (%d); %d in all",
-         (int)g_ghMarks[0], (int)g_ghSecs[0] / 60, (int)g_ghMarks[1], (int)g_ghSecs[1] / 60, (int)(g_ghMarks[0] + g_ghMarks[1]));
-}
-#endif
 static DWORD WINAPI aotrMarkKeys(LPVOID) {
     bool rc = false, other = false, sl = false; LONG n = 0, lastW = g_frW; DWORD lastSec = GetTickCount();
     for (;;) {
         Sleep(30);
-#ifdef AOTR_DIAG
-        vmSampleWs();
-#endif
         bool r = (GetAsyncKeyState(VK_RCONTROL) & 0x8000) != 0;
         if (r) { if (!rc) other = false;
                  for (int k = 0x01; k <= 0xFE && !other; ++k) {          // another key or a mouse button held with it: not a marker
                      if (k == VK_CONTROL || k == VK_RCONTROL || k == VK_LCONTROL) continue;
                      if (GetAsyncKeyState(k) & 0x8000) other = true; } }
-#ifdef AOTR_DIAG
-        else if (rc && !other) logf("MARKER %d: the player pressed the right Ctrl here (frame %d)%s%s", (int)++n, (int)g_frW, gdMarkNote(), ghState());
-#else
         else if (rc && !other) logf("MARKER %d: the player pressed the right Ctrl here (frame %d)%s", (int)++n, (int)g_frW, gdMarkNote());
-#endif
         rc = r;
         bool s2 = (GetAsyncKeyState(VK_SCROLL) & 0x8000) != 0;
         if (s2 && !sl) logf("MARKER %d: the player pressed Scroll Lock here (frame %d)%s", (int)++n, (int)g_frW, gdMarkNote());
@@ -2922,9 +2812,6 @@ static DWORD WINAPI aotrMarkKeys(LPVOID) {
         if (now - lastSec >= 1000) {
             LONG w = g_frW, fr = w - lastW; lastW = w;
             bool play = g_frLastLogicTick && now - g_frLastLogicTick < 2000;
-#ifdef AOTR_DIAG
-            ghTick(play);
-#endif
             if (play && fr > 0 && fr < 28) logf("drop: %d frames in the last second (frame %d)", (int)fr, (int)w);
             lastSec = now;
         }
@@ -2944,11 +2831,7 @@ static DWORD WINAPI aotrProdReport30(LPVOID) {
         if (f <= 0) continue;
         alReport(f);
         clReport();
-        fxpReport(f); pxReport(); tkwReport();
-#ifdef AOTR_DIAG
-        ghReport(); vmReport();
-#endif
-        psfReport(); peReport(); coreReport(); tkReport(); plReport(); plTrickleReport(); plLearnSave(); gdTurboReport(); abReport(); wmqReport(); pfReport(); wlReport(); pswReport(); psrReport(); amfReport(); cbfReport(); fmfReport();
+        psfReport(); peReport(); coreReport(); tkReport(); plReport(); plTrickleReport(); plLearnSave(); gdTurboReport(); abReport(); wmqReport(); pfReport(); wlReport(); pswReport(); psrReport(); amfReport();
         { static LONG lB = 0, lE = 0, lS = 0, lL = 0, lA = 0, lD = 0, lF = 0;
           LONG b = g_rtNPxBatch, e = g_rtNPxEntry, sh = g_rtNShroud, tl = g_rtNTMLock, ta = g_rtNTMAdopt, td = g_rtNTMDrop, tf = g_rtNTMFail;
           if (b != lB || sh != lS || tl != lL)
@@ -3096,7 +2979,7 @@ static DWORD WINAPI initThread(LPVOID) {
                  g_engineHooks ? "Its verified addresses may be used (ground patch textures, render list)." :
                  "Only the parts that do not depend on this build's addresses are installed (render thread, heap, preshader cache, fast CRT).");
         } else if (family && nt->FileHeader.TimeDateStamp == 0x460DA09E && aotrAnchorsHold(base)) {
-            // v85: the same 2.02 compile (its time stamp) is enough to look further - size, checksum and entry point may
+            // v72.1: the same 2.02 compile (its time stamp) is enough to look further - size, checksum and entry point may
             // change with an AOTR update; the anchors decide, part by part
             // v72: an AOTR update that changed game.dat only where this DLL never looks (AOTR 10: 15 bytes in the AI's
             // target search) - every address the source names still holds the verified build's bytes
@@ -3260,19 +3143,9 @@ static DWORD WINAPI initThread(LPVOID) {
 #endif
         if (aotrPart("pevict", "aotr_pevict.inc")) installPartEvict();                          // v42: particle limit eviction - no repeated empty scans (exact; PEVICT_OFF)
         if (!aotrPart("amfind", "aotr_amfind.inc")) {} else if (!gdNewOff()) installAmFind(); else logf("amfind: not installed (GUARD safe mode).");
-        if (!aotrPart("cbfind", "aotr_cbfind.inc")) {} else if (!gdNewOff()) installCbFind(); else logf("cbfind: not installed (GUARD safe mode).");
-        if (!aotrPart("fmfind", "aotr_fmfind.inc")) {} else if (!gdNewOff()) installFmFind(); else logf("fmfind: not installed (GUARD safe mode).");
-        if (!aotrPart("maskfast", "aotr_maskfast.inc")) {} else if (!gdNewOff()) installMaskFast(); else logf("maskfast: not installed (GUARD safe mode).");
-        if (!aotrPart("hashfind", "aotr_hashfind.inc")) {} else if (!gdNewOff()) installHashFind(); else logf("hashfind: not installed (GUARD safe mode).");   // v82: hash map find by multiply (self-proving; HASHFIND_OFF)   // v81: flag mask test in SSE (self-proving; MASKFAST_OFF)   // v81: Object::findModule per object (self-proving; FMFIND_OFF)   // v77: command buttons by name without the walk (self-proving; CBFIND_OFF)
         if (!aotrPart("psremove", "aotr_psremove.inc")) {} else if (!gdNewOff()) installPsRemove(); else logf("psremove: not installed (GUARD safe mode).");                           // v55: FX manager remove without walking every system (self-proving; PSREMOVE_OFF)
         if (aotrPart("pswarm", "aotr_pswarm.inc")) installPsWarm();                             // v54: the particle system list read ahead before update and draw walk it (PSWARM_OFF)
         if (aotrPart("psfind", "aotr_psfind.inc")) installPsFind();                             // v41: ParticleSystemManager::findParticleSystemByID without walking every system (self-proving; PSFIND_OFF)
-        if (!aotrPart("pxpar", "aotr_pxpar.inc")) {} else if (!gdNewOff()) installPxPar(); else logf("pxpar: not installed (GUARD safe mode).");
-        if (!aotrPart("taskwarm", "aotr_taskwarm.inc")) {} else if (!gdNewOff()) installTaskWarm(); else logf("taskwarm: not installed (GUARD safe mode).");   // v77: the FX renderer's task list read ahead (prefetch only; TASKWARM_OFF)   // v74: the particles' own update on the spare cores (exact, self-checking; PXPAR_OFF)
-#ifdef AOTR_DIAG
-        if (aotrPart("vmprobe", "aotr_vmprobe.inc")) installVmProbe();                            // v77: the page faults' source - commits / frees by caller, working-set trims
-        if (aotrPart("fxprobe", "aotr_fxprobe.inc")) installFxProbe();                            // v73: the particle update measured - its time and the module classes used (read only)
-#endif
         if (aotrPart("shadownbr", "aotr_shadownbr.inc")) installShadowNbr();                          // v32: shadow edge neighbours without comparing every triangle pair (exact, self-checked, big models on every core)
         if (aotrPart("shadowweld", "aotr_shadowweld.inc")) installShadowWeld();                         // v32: shadow mesh vertex weld by grouping equal positions instead of every pair (exact, self-checked)
         // v33: pose warm (skeleton tree updates on worker threads) measured in the Helm's Deep battle: exact (MISMATCH 0 in

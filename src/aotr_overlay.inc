@@ -504,7 +504,7 @@ static void ovSessionEnd() {
 // test-11: the player could not tell whether the DLL was running. The read-out was a window, and the game runs in
 // exclusive fullscreen (Options.ini "Resolution = 1920 1080", DXVK's log "Windowed: false"): no window of ours is ever
 // drawn over that. So v31 paints the read-out into the game's own picture, right before it is shown:
-//   - for the first 30 s of pictures (and 5 s after F7 brings it back) a banner: "AOTR V85 BUILD 135 RUNNING" and
+//   - for the first 30 s of pictures (and 5 s after F7 brings it back) a banner: "AOTR V72.1 BUILD 136 RUNNING" and
 //     which Direct3D 9 draws on which chip ("DXVK / NVIDIA", "WINDOWS D3D9 / NVIDIA");
 //   - always, while shown, one small line: fps, the longest frame of the last second, the long frames so far;
 //   - on F7 for 3 s: "AOTR PANEL SHOWN (F7)" or "AOTR PANEL HIDDEN (F7)", so a press always has an answer.
@@ -627,7 +627,7 @@ static void ovIfBuild(bool banner, int msg, bool show) {
         LONG b = ovText(&g_ovIfRen, x, y, 2, t->renderer); if (b > w) w = b; y += 7 * 2 + 6;
     }
     if (show) {
-        LONG c = ovText(&g_ovIfLn, x, y, 2, t ? t->line : "AOTR V85 B135"); if (c > w) w = c; y += 7 * 2 + 6;
+        LONG c = ovText(&g_ovIfLn, x, y, 2, t ? t->line : "AOTR V72.1 B136"); if (c > w) w = c; y += 7 * 2 + 6;
         LONG f = t ? t->fps10 : 0;
         g_ovIfLnCol = f >= 280 ? 0xFF40FF40u : (f >= 200 ? 0xFFFFFF40u : 0xFFFF6040u);
     }
@@ -824,7 +824,7 @@ static int ovAbFps10(const long* ab) { return ab[1] > 0 ? (int)((LONG64)ab[2] * 
 // The exact switch set that produced a reading, so "the best run" can be compared with this one. The names
 // are the INI's own, shortened, and the numbers are read out of the INI itself - never invented.
 static void ovSwitches(char* out, int cap) {                // v30: one fixed set - the build says what it is
-    lstrcpynA(out, "v85 build 135 (one fixed set)", cap);
+    lstrcpynA(out, "v72.1 stable build 136 (one fixed set)", cap);
 }
 static void ovLoadBest() {
     char p[MAX_PATH]; aotrPath(p, "aotr_best.txt");
@@ -1128,7 +1128,7 @@ static DWORD WINAPI ovThread(void*) {
         g_ovPh = 10; g_ovPhAt = GetTickCount();                                // the panel text
         { static LONG lastTp = 0; LONG tp = g_tpNTex; LONG tpS = tp - lastTp; lastTp = tp;
         wsprintfA(g_ovCat,
-                  "AOTR accel v85 build 135   F7 = hide   %d min\r\n"
+                  "AOTR accel v72.1 stable build 136   F7 = hide   %d min\r\n"
                   "fps %d.%d   average(5s) %d.%d   frame %d ms   longest %d ms\r\n"
                   "hitches(100ms+) %d   longest this session %d ms   disk waits %d ms\r\n"
                   "cpu %d.%02d cores   ram %u MB   threads %u   ground patches %d/s\r\n"
@@ -1160,15 +1160,15 @@ static DWORD WINAPI ovThread(void*) {
             lgFr = fr; lgT = tn; }
           // v67: the multiplayer check on the screen - every part that touches the game's logic proves itself against the
           // engine's own code from the first logic step and all through the game; one difference turns that part off
-          { LONG chk = g_pfChecked + g_amfChecked + g_eqChecked + g_fltChecked + g_lsSeqChecked + g_cbfChecked + g_fmfChecked + g_mskChecked + g_hfChecked;
-            LONG bad = g_pfBad + g_amfBad + g_eqBad + g_fltBad + g_lsSeqBad + g_cbfBad + g_fmfBad + g_mskBad + g_hfBad;
+          { LONG chk = g_pfChecked + g_amfChecked + g_eqChecked + g_fltChecked + g_lsSeqChecked;
+            LONG bad = g_pfBad + g_amfBad + g_eqBad + g_fltBad + g_lsSeqBad;
             DWORD gl = *(volatile DWORD*)0x00DE412C; DWORD md = gl ? *(DWORD*)(ULONG_PTR)(gl + 0x110) : 0;
             bool net = md == 1 || md == 5;
-            if (!bad) wsprintfA(ren, "MP CHECK OK: 9 PARTS, %d CHECKS, 0 DIFFERENT%s", (int)chk, net ? " (NETWORK GAME)" : "");
+            if (!bad) wsprintfA(ren, "MP CHECK OK: 5 PARTS, %d CHECKS, 0 DIFFERENT%s", (int)chk, net ? " (NETWORK GAME)" : "");
             else wsprintfA(ren, "MP CHECK: %d DIFFERENT! THAT PART TURNED ITSELF OFF - SEND THE LOG", (int)bad);
             g_ovMpChk = chk; g_ovMpBad = bad; }
-          wsprintfA(ln, "AOTR B%d  LOGIC %d.%d/S  FPS %d.%d  LONGEST %d MS  HITCHES %d  %s", 135, (int)(g_ovLogic10 / 10), (int)(g_ovLogic10 % 10), (int)(fps10 / 10), (int)(fps10 % 10), (int)worst, (int)g_ovSt100, g_ovMpBad ? "MP: DIFFERENT!" : "MP: OK");
-          ovIfPublish("AOTR V85 BUILD 135 RUNNING", ren, ln, fps10); }
+          wsprintfA(ln, "AOTR B%d  LOGIC %d.%d/S  FPS %d.%d  LONGEST %d MS  HITCHES %d  %s", 136, (int)(g_ovLogic10 / 10), (int)(g_ovLogic10 % 10), (int)(fps10 / 10), (int)(fps10 % 10), (int)worst, (int)g_ovSt100, g_ovMpBad ? "MP: DIFFERENT!" : "MP: OK");
+          ovIfPublish("AOTR V72.1 BUILD 136 RUNNING", ren, ln, fps10); }
         { static LONG lastKeys = 0; LONG kp = g_ovKeyPresses;
           if (kp != lastKeys) { lastKeys = kp; logf("overlay: F7 pressed (%d so far) - the panel is now %s.", (int)kp, g_ovShow ? "SHOWN" : "HIDDEN"); } }
         { static LONG paintSaid = 0;
@@ -1192,7 +1192,7 @@ static DWORD WINAPI ovThread(void*) {
                 LONG avgFps10 = g_ovRepSec ? (LONG)(g_ovRepFrames * 10 / g_ovRepSec) : 0;   // x10, like everywhere else
                 int cpuAvg = g_ovRepCpuN ? (int)(g_ovRepCpuSum / g_ovRepCpuN) : 0;
                 int c0 = (int)g_ovStCls[0], c1 = (int)g_ovStCls[1], c2 = (int)g_ovStCls[2], c3 = (int)g_ovStCls[3];
-                n = ovAppend(g_ovB, sizeof(g_ovB), n, g_vanilla ? "AOTR accel v85 (diagnostics, build 135) - VANILLA: THE GAME AS IT IS (measurement only) - REPORT\r\n\r\n" : "AOTR accel v85 (diagnostics, build 135) - REPORT   (rewritten every 60 seconds while the game runs)\r\n\r\n");
+                n = ovAppend(g_ovB, sizeof(g_ovB), n, g_vanilla ? "AOTR accel v72.1 stable (diagnostics, build 136) - VANILLA: THE GAME AS IT IS (measurement only) - REPORT\r\n\r\n" : "AOTR accel v72.1 stable (diagnostics, build 136) - REPORT   (rewritten every 60 seconds while the game runs)\r\n\r\n");
                 n = ovAppend(g_ovB, sizeof(g_ovB), n, "play time %d min %d s | average %d.%d fps, best 5 s %d.%d fps (at %d s), peak %d.%d\r\n",
                              (int)(g_ovRepSec / 60), (int)(g_ovRepSec % 60), (int)(avgFps10 / 10), (int)(avgFps10 % 10),
                              (int)(g_ovBest5 / 10), (int)(g_ovBest5 % 10), (int)g_ovBest5At, (int)(g_ovPeak10 / 10), (int)(g_ovPeak10 % 10));
@@ -1219,8 +1219,8 @@ static DWORD WINAPI ovThread(void*) {
                              (int)g_plRepT1All, (int)g_plRepT1Fed, (int)g_plRepT1Names, (int)g_plPlanAll, (int)g_plPlanAt, (int)g_plANFed, g_plFeedStop[0] ? g_plFeedStop : "-");
                 if (g_plTrBatches || g_plTrOn) n = ovAppend(g_ovB, sizeof(g_ovB), n, "prepared in the background during play: %d batches (%d of them sudden ones), plan %d/%d templates, %d/%d names%s\r\n",
                              (int)g_plTrBatches, (int)g_plTrT1, (int)g_plPlanAt, (int)g_plPlanN, (int)g_plANAt, (int)g_plANIn, g_plTrOn ? " - still going" : "");
-                n = ovAppend(g_ovB, sizeof(g_ovB), n, "learned list (what first appeared in earlier battles): %d files (%d MB) read into the file cache in the menu, newest first; %d new names written this session\r\n",
-                             (int)g_plLwFiles, (int)g_plLwMB, (int)g_plLearnSaved);
+                n = ovAppend(g_ovB, sizeof(g_ovB), n, "learned list (what first appeared in earlier battles): %d names read, %d of them prepared first in this game, %d new names written this session\r\n",
+                             (int)g_plLearnRead, (int)g_plLearnUsed, (int)g_plLearnSaved);
                 n = ovAppend(g_ovB, sizeof(g_ovB), n, "graphics: %s | %s\r\n", g_ovRendererKnown ? g_ovRenderer : "not known yet", g_ovGpuNote);
                 n = ovAppend(g_ovB, sizeof(g_ovB), n, "ground patch textures: %d built on %d cores (check: %s)\r\n",
                              (int)g_tpNTex, g_tpOn ? (int)g_tpHelpers + 1 : 1,
@@ -1229,7 +1229,7 @@ static DWORD WINAPI ovThread(void*) {
                              (int)g_fwNWarm, (int)(g_fwReadBytes >> 20));
                 if (g_ovMpSecs) n = ovAppend(g_ovB, sizeof(g_ovB), n, "MULTIPLAYER: %d s in network games - average %d.%d fps, logic %d.%d steps/s (should be 5); %d s with fewer than 4.5 steps, %d s of them with fast pictures (25+ fps) - the game was waiting for the NETWORK or a SLOWER PLAYER\r\n",
                              (int)g_ovMpSecs, (int)(g_ovMpFpsSum / g_ovMpSecs / 10), (int)(g_ovMpFpsSum / g_ovMpSecs % 10), (int)(g_ovMpLogicSum / g_ovMpSecs / 10), (int)(g_ovMpLogicSum / g_ovMpSecs % 10), (int)g_ovMpWaitSecs, (int)g_ovMpNetSecs);
-                n = ovAppend(g_ovB, sizeof(g_ovB), n, "MP CHECK: the 9 parts that touch the logic (whole-map query, modifier index, type equivalence, filter memo, logic order, command button names, object modules, flag masks, id map buckets) checked themselves against the original code %d times, %d different%s\r\n",
+                n = ovAppend(g_ovB, sizeof(g_ovB), n, "MP CHECK: the 5 parts that touch the logic (whole-map query, modifier index, type equivalence, filter memo, logic order) checked themselves against the original code %d times, %d different%s\r\n",
                              (int)g_ovMpChk, (int)g_ovMpBad, g_ovMpBad ? " - DIFFERENT: that part turned itself off, send the log" : " - all the same");
                 n = ovAppend(g_ovB, sizeof(g_ovB), n, "multiplayer: logic speed unchanged (FpsLimit=0, LogicHz=0, SmoothAnimation=0), logic results bit-exact (the speedups check themselves against the original code)\r\n");
                 n = ovAppend(g_ovB, sizeof(g_ovB), n, "frame limit: the game itself caps the frame rate at 30 fps (left alone for multiplayer) - the average cannot go above 30, the difference is in the hitches\r\n");
@@ -1352,7 +1352,7 @@ extern "C" __declspec(dllexport) int __cdecl AotrPresentCount() { return (int)g_
 // 1 the line only, 2 hidden with the "HIDDEN" message, 3 hidden (nothing). box: x1,y1,x2,y2 of what was painted.
 extern "C" __declspec(dllexport) int __cdecl AotrInFrameTest(void* dev, int mode, int* box) {
     InterlockedExchange(&g_ovIfWant, 1); g_ovIfDead = 0; g_ovIfOk = 0; g_ovIfNextChk = 0; g_ovIfSig = -1;
-    ovIfPublish("AOTR V85 BUILD 135 RUNNING", "WINDOWS D3D9 / NVIDIA - F7 HIDES", "AOTR B135 FPS 29.5  LONGEST 45 MS  HITCHES 3", 295);
+    ovIfPublish("AOTR V72.1 BUILD 136 RUNNING", "WINDOWS D3D9 / NVIDIA - F7 HIDES", "AOTR B136 FPS 29.5  LONGEST 45 MS  HITCHES 3", 295);
     LONG now = (LONG)GetTickCount();
     g_ovIfFirst = (mode == 0) ? now : now - 60000; g_ovIfBannerUntil = 0;
     g_ovShow = (mode <= 1) ? 1 : 0;

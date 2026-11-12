@@ -623,8 +623,7 @@ static DWORD WINAPI frThread(LPVOID) {
           if (net != lastNet) { lastNet = net; LONG hz = g_frHz ? g_frHz : (net ? 50 : 0);
 #ifndef AOTR_DIAG
                                 hz = g_frHz;                                  // v70 release: no stack sampling in network games
-#endif
-                                g_frHzNow = hz; g_frDiag = hz >= 50; step = g_pqpf.QuadPart / (hz ? hz : 1); nextS = now + step;
+#endif g_frHzNow = hz; g_frDiag = hz >= 50; step = g_pqpf.QuadPart / (hz ? hz : 1); nextS = now + step;
                                 if (net && hz) logf("frame: a network game - the multiplayer measurement is on (%d samples a second, the functions every 30 s).", (int)hz); } }
         if (g_frHzNow && tib && live && now >= nextS) {
             LONG64 a = qpcNow(); frSample(h, tib, stk, stkCap); LONG64 d = qpcNow() - a;
@@ -657,13 +656,7 @@ static void installFrameProf() {
     // stopping it 54-75 us); 100 still gives ~3000 samples in each 30 s function report.
     // v54: 50 a second and at most 32 KB of stack per sample (test-35: 100 a second cost the game thread 0.3-1.2 ms of
     // every battle frame, each sample stopping it 65-280 us); ~1500 samples still go into each 30 s function report.
-#ifdef AOTR_DIAG
-    // v74: the diagnostics build samples 50 a second by default, so one test names the functions the drawing (shadows
-    // included) spends its time in - the next things to move to other cores. About 0.3-1 ms a frame (v54 measurement).
-    int hz = have ? (int)GetPrivateProfileIntA("Engine", "FrameSampleHz", 50, ini) : 50;
-#else
     int hz = have ? (int)GetPrivateProfileIntA("Engine", "FrameSampleHz", 0, ini) : 0;   // v67: 0 - the stack sampler is off (the game thread is never stopped; FrameSampleHz = 50 turns the diagnosis back on)
-#endif
     char env[16]; env[0] = 0;
     if (GetEnvironmentVariableA("AOTR_FRAMEHZ", env, sizeof(env)) && env[0]) hz = atoi(env);
     if (want <= 0) { logf("frame: the per-frame instrument is off ([Engine] FrameProf = 0)."); return; }

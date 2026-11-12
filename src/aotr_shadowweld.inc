@@ -232,7 +232,6 @@ static DWORD WINAPI swdReport(LPVOID) {
 
 static void installShadowWeld() {
     char env[8]; env[0] = 0;
-    { char mk[MAX_PATH]; if (GetFileAttributesA(aotrPath(mk, "SHADOWWELD_OFF")) != INVALID_FILE_ATTRIBUTES) { logf("shadow-weld: SHADOWWELD_OFF is present - the engine's own loop welds the shadow mesh vertices."); return; } }   // v82.1: a file switch too
     if (GetEnvironmentVariableA("AOTR_SHADOWWELD", env, sizeof(env)) && env[0] == '0') { logf("shadow-weld: off (AOTR_SHADOWWELD=0) - the engine's own loop welds the shadow mesh vertices."); return; }
     if (!swdCodeIsKnown() || memcmp((const void*)SWD_PATCH, "\x8B\x5E\x18\x83\xC4\x0C", 6)) { logf("shadow-weld: the shadow weld code is not what this build has - the engine's own loop welds them."); return; }
     HANDLE fz[256]; int nf = 0;

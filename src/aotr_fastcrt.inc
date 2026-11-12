@@ -15,10 +15,7 @@
 //   strcmp     SSE2 16 bytes at a time, byte-wise next to a page boundary (11 ns -> 4 ns).
 //   strncmp    the same. msvcr71's begins with repne scasb - it measures a string before comparing: 65 ns -> 4 ns.
 //   _mbscpy    strlen + block copy (7 ns -> 3 ns); overlapping ranges go to msvcr71.
-//   strncpy    v78: only for a size of 64 or more (shorter ones go to msvcr71, whose single dword loop was faster
-//              there). The v74 sampler found the render stage scope 0x517690 - one per batch in PerformRendering -
-//              copying its name with strncpy(.., 0x100): every call writes 256 bytes, mostly the zero padding, which
-//              the SSE fill does at 16 bytes a store. Same bytes written, same return value.
+//   strncpy    NOT replaced: three passes (measure, copy, pad) came out slower than msvcr71's single dword loop.
 //   strchr     SSE2, stopping at the terminator (the terminator is a hit when c is 0, as in msvcr71).
 //   memchr     SSE2.
 //   floor/ceil roundsd instead of msvcr71's SSE2 dispatch and mxcsr juggling (5.5 ns -> 2 ns). Needs SSE4.1.
@@ -257,9 +254,8 @@ static char* __cdecl fastMbscpy(char* dst, const char* src) {
     return dst;
 }
 static char* __cdecl fastStrncpy(char* dst, const char* src, size_t n) {
-    if (n < 64) return o_crtStrncpy(dst, src, n);
     size_t len = crtStrnlen(src, n);
-    if (crtOverlap((const BYTE*)dst, (const BYTE*)src, len < n ? len + 1 : len)) return o_crtStrncpy(dst, src, n);   // (the terminator it reads included)
+    if (crtOverlap((const BYTE*)dst, (const BYTE*)src, len ? len : 1)) return o_crtStrncpy(dst, src, n);
     crtCopyFwd((BYTE*)dst, (const BYTE*)src, len);
     if (len < n) fastMemset(dst + len, 0, n - len);      // strncpy pads the whole of the rest with zeros
     return dst;
@@ -349,7 +345,6 @@ static void installFastCrt(BYTE* gameBase) {
             { "strncmp",   (void*)&fastStrncmp,  false },   // msvcr71's opens with repne scasb: 65 ns
             { "strchr",    (void*)&fastStrchr,   false },
             { "_mbscpy",   (void*)&fastMbscpy,   false },
-            { "strncpy",   (void*)&fastStrncpy,  false },   // v78: large sizes only (the render stage scope's 256-byte name)
             { "_strcmpi",  (void*)&fastStricmp,  false },
             { "_strnicmp", (void*)&fastStrnicmp, false },
             { "floor",     (void*)&fastFloor,    true  },

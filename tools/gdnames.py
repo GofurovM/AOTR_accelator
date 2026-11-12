@@ -13,11 +13,11 @@ def text(d):
 Rva,Rp,Rn=text(R); Bva,Bp,Bn=text(B)
 starts=sorted(int(x,16) for x in re.findall(r'0x([0-9A-Fa-f]{6})',open('/home/user/AOTR_MC/src/gd_funcs.inc').read()))
 sym={}
-for row in (csv.DictReader(open(O+'/reverse/symbols.csv')) if os.path.exists(O+'/reverse/symbols.csv') else []):
+for row in csv.DictReader(open(O+'/reverse/symbols.csv')):
     try: sym.setdefault(int(row['address'],16),row['name'])
     except: pass
 import json
-for k,v in (json.load(open(NAMES)) if os.path.exists(NAMES) else {}).items():
+for k,v in json.load(open(NAMES)) if os.path.exists(NAMES) else {}.items():
     sym.setdefault(int(k,16), v[0]+'  '+v[1])
 def startof(a):
     i=bisect.bisect_right(starts,a)-1; return starts[i] if i>=0 else None

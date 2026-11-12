@@ -3451,11 +3451,11 @@ static DWORD WINAPI rtKeyThread(LPVOID) {
             // the queue handoff is live (render thread); CORE = every call runs on the game thread while the texture
             // cache, the texture workers, the warm lists, the v27 lock admission, the read-ahead and the overlay all
             // keep running. One 20-minute session therefore measures both, and the AB lines say which was smoother.
-            if (g_rtCoreMode) {                          // v83.1: the wish only - rtApplyToggle flips both flags after draining the queue
-                InterlockedExchange(&g_rtWantOn, 1);
+            if (g_rtCoreMode) {
+                InterlockedExchange(&g_rtCoreMode, 0); InterlockedExchange(&g_rtWantOn, 1);
                 logf("rt: key VK %d pressed - switching to FULL mode (queue handoff live; applies at the next frame).", k);
             } else {
-                InterlockedExchange(&g_rtWantOn, 0);
+                InterlockedExchange(&g_rtCoreMode, 1); InterlockedExchange(&g_rtWantOn, 0);
                 logf("rt: key VK %d pressed - switching back to CORE mode (no queue, every call direct; applies at the next frame).", k);
             }
         }
