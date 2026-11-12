@@ -1,0 +1,34 @@
+// aotr_start.exe's resources: the ring icons (the first one is the program's own icon) and its version.
+#include <windows.h>
+101 ICON "..\\res\\aotr_gold.ico"
+102 ICON "..\\res\\aotr_yellow.ico"
+103 ICON "..\\res\\aotr_red.ico"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 85,0,0,135
+ PRODUCTVERSION 85,0,0,135
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0x0L
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "AOTR Accelerator project (open source, MIT)"
+            VALUE "FileDescription", "AOTR Accelerator - starter (installs and loads the performance add-on for Age of the Ring)"
+            VALUE "InternalName", "aotr_start"
+            VALUE "FileVersion", "85 (build 135)"
+            VALUE "ProductName", "AOTR Accelerator"
+            VALUE "ProductVersion", "85 (build 135)"
+            VALUE "OriginalFilename", "AOTR_ACCELERATOR.exe"
+            VALUE "LegalCopyright", "MIT license - based on BFME2 Accelerator by Ohad Baehr"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
